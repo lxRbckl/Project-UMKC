@@ -1,180 +1,221 @@
-# Project UMKC 1 by Alex Arbuckle #
+# Project UMKC 2
 
+
+# Import <
+from os import path
+from time import strftime
 from asyncio import sleep
 from json import load, dump
-from datetime import datetime
-from discord.ext import commands
+from discord import Intents
+from discord.ext.commands import Bot
 
+# >
+
+
+# Declaration <
+path = path.realpath(__file__)[:-8]
+UMKC = Bot(command_prefix = '', intents = Intents.all())
 token = ''
-client = commands.Bot(command_prefix = '')
 
-def setDict(arg):
-    '''  '''
+# >
 
-    # open file
-    with open('UMKC.json', 'w') as f:
 
-        # write dictionary
-        dump(arg, f, indent = 4)
+def jsonLoad(arg):
+    ''' arg : str '''
 
-def getDict():
-    '''  '''
-
-    # if file
+    # if File Exists <
     try:
 
-        # open flie
-        with open('UMKC.json', 'r') as f:
+        # Read JSON File <
+        with open(f'{path}/{arg}.json', 'r') as fileVariable:
 
-            # return data
-            return {int(i) : j for i, j in load(f).items()}
+            return load(fileVariable)
 
-    # if no file
-    except:
+        # >
 
-        # return new
-        return {}
+    # >
 
-@client.command()
-async def setChannel(ctx):
+    except Exception as e:
+
+        print(e)
+
+        # Create JSON <
+        jsonDump(arg, {})
+        return jsonLoad(arg)
+
+        # >
+
+
+def jsonDump(*args) -> None:
+    ''' args[0] : str
+        args[1] : dict '''
+
+    # Write JSON File <
+    with open(f'{path}/{args[0]}.json', 'w') as fileVariable:
+
+        dump(args[1], fileVariable, indent = 4)
+
+    # >
+
+
+@UMKC.command(aliases = ['purge', 'Purge'])
+async def commandPurge(ctx):
     '''  '''
 
-    # getting current dictionary
-    d = getDict()
+    # if Admin <
+    if (str(ctx.author) in jsonLoad('Setting')['adminRole']):
 
-    # if class does not exist
-    if (ctx.channel.id not in d.keys()):
+        l = [int(k) for k in jsonLoad('Schedule').keys()]
+        [await UMKC.get_channel(k).purge() for k in l]
 
-        # declaring class in dictionary
-        d[int(ctx.channel.id)] = {}
+    # >
 
-        # declaring and initializing link
-        d[int(ctx.channel.id)]['link'] = 'No Link Available'
 
-        # updating dictionary
-        setDict(d)
+async def setName(k, schedule, arg):
+    ''' k : str
+        schedule : dict
+        arg : str '''
 
-@client.command()
-async def setTitle(ctx, *args):
+    schedule[k]['Name'] = arg
+    return schedule
+
+
+async def setTime(k, schedule, arg):
+    ''' k : str
+        schedule : dict
+        arg : str '''
+
+    # if AM or PM <
+    if (arg[1].upper() in ['AM', 'PM']):
+
+        strVariable = f'{arg[0]} {arg[1].upper()}'
+        schedule[k]['Time'] = strVariable
+
+    # >
+
+    return schedule
+
+
+async def setLink(k, schedule, arg):
+    ''' k : str
+        schedule : dict
+        arg : str '''
+
+    schedule[k]['Link'] = arg
+    return schedule
+
+
+async def setDay(k, schedule, arg):
+    ''' k : str
+        schedule : dict
+        arg : tuple '''
+
+    check, l = jsonLoad('Setting')['checkChannel'], []
+    for i in arg:
+
+        [l.append(i) for v in check.values() if (i.title() in v)]
+
+    schedule[k]['Day'] = l
+    return schedule
+
+
+async def setStatus(k, schedule, arg):
+    ''' k : str
+        schedule : dict
+        arg : str'''
+
+    # if On or Off <
+    if (arg.title() in ['On', 'Off']):
+
+        schedule[k]['Status'] = arg.title()
+
+    # >
+
+    return schedule
+
+
+@UMKC.command(aliases = ['set', 'Set'])
+async def commandSet(ctx, *args):
+    ''' args[0] : str
+        args[n] : str '''
+
+    k = str(ctx.channel.id)
+    schedule = jsonLoad('Schedule')
+
+    # if New Channel <
+    if (k not in schedule.keys()):
+
+        schedule[k] = jsonLoad('Setting')['bootChannel']
+
+    # >
+
+    # if args <
+    if (len(args) != 0):
+
+        funcDict = {'Day' : setDay(k, schedule, args[1:]),
+                    'Name' : setName(k, schedule, args[1]),
+                    'Link' : setLink(k, schedule, args[1]),
+                    'Time' : setTime(k, schedule, args[1:]),
+                    'Status' : setStatus(k, schedule, args[1])}
+
+        schedule = await funcDict[args[0].title()]
+
+    # >
+
+    jsonDump('Schedule', schedule)
+    await ctx.message.delete()
+
+
+@UMKC.command(aliases = ['get', 'Get'])
+async def commandGet(ctx):
     '''  '''
 
-    # getting current dictionary
-    d = getDict()
+    schedule = jsonLoad('Schedule')[str(ctx.channel.id)]
+    out = '\n'.join(f'{k}\t{v}' for k, v in schedule.items())
 
-    # setting class title
-    d[ctx.channel.id]['title'] = ''.join('{} '.format(i) for i in args)
+    await ctx.channel.send(out, delete_after = 60)
+    await ctx.message.delete()
 
-    # updating dictionary
-    setDict(d)
 
-@client.command()
-async def getTitle(ctx):
+@UMKC.event
+async def on_ready():
     '''  '''
 
-    # getting current dictionary
-    d = getDict()
-
-    # if title exists
-    try:
-
-        # sending title
-        await ctx.channel.send(d[ctx.channel.id]['title'], delete_after = 60.0)
-
-    except:
-
-        pass
-
-@client.command()
-async def setTime(ctx, arg, *args):
-    '''  '''
-
-    # getting current dictionary
-    d = getDict()
-
-    # setting class time
-    d[ctx.channel.id]['time'] = arg
-    d[ctx.channel.id]['day'] = [i for i in args]
-
-    # updating dictionary
-    setDict(d)
-
-@client.command()
-async def getTime(ctx):
-    '''  '''
-
-    # getting current dictionary
-    d = getDict()
-
-    # if time exists
-    try:
-
-        # getting time
-        time = d[ctx.channel.id]['time']
-        day = ''.join(i for i in d[ctx.channel.id]['day'])
-
-        # sending time
-        await ctx.channel.send('{} {}'.format(time, day), delete_after = 60.0)
-
-    except:
-
-        pass
-
-@client.command()
-async def setLink(ctx, arg):
-    '''  '''
-
-    # getting current dictionary
-    d = getDict()
-
-    # setting class link
-    d[ctx.channel.id]['link'] = arg
-
-    # updating dictionary
-    setDict(d)
-
-@client.command()
-async def getLink(ctx):
-    '''  '''
-
-    # getting current dictionary
-    d = getDict()
-
-    # if link exists
-    try:
-
-        # sending link
-        await ctx.channel.send(d[ctx.channel.id]['link'], delete_after = 60.0)
-
-    except:
-
-        pass
-
-@client.command()
-async def init(ctx):
-    '''  '''
-
-    # while running
+    # while Online <
     while (True):
 
-        # if new minute
-        if (datetime.now().second % 60 == 0):
+        # if New Minute <
+        if ((int(strftime('%S')) % 60) == 0):
 
-            # check for class
-            d, day = getDict(), datetime.today().weekday()
-            time = '{}{}'.format(datetime.now().hour, datetime.now().minute)
-            for i in d.keys():
+            # Iterate Valid Elements <
+            schedule = jsonLoad('Schedule')
+            for k, v in [[k, v] for k, v in schedule.items() if (v['Status'] == 'On')]:
 
-                # if class
-                if ((time == d[i]['time']) and (str(day) in d[i]['day'])):
+                day, check = strftime('%A'), jsonLoad('Setting')['checkChannel']
+                for i in check[day]:
 
-                    # building notification
-                    notification = ':alarm_clock: {}:alarm_clock:'.format(d[i]['title'])
-                    notification += '\n\n{}'.format(d[i]['link'])
+                    isDay = (i in [j.title() for j in v['Day']])
+                    hour, minute, mode = strftime('%I %M %p').split()
+                    isTime = (f'{int(hour)}{minute} {mode}' == v['Time'])
 
-                    # sending notification
-                    await client.get_channel(i).send(notification, delete_after = 600.0)
+                    # if Day and Time <
+                    if (isDay and isTime):
 
-            # stall
+                        out = ':alarm_clock: {} :alarm_clock:'.format(v['Link'])
+                        await UMKC.get_channel(int(k)).send(out, delete_after = 60)
+
+                    # >
+
+            # >
+
             await sleep(55)
 
-client.run(token)
+    # >
+
+
+# Main <
+if (__name__ == '__main__'):
+
+    UMKC.run(token)
+
+# >

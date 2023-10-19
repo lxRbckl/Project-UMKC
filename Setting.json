@@ -1,0 +1,38 @@
+{
+  "adminRole" : [
+  ],
+  "bootChannel" : {
+    "Status" : "On",
+    "Name" : "NA",
+    "Time" : "NA",
+    "Link" : "NA",
+    "Day" : []
+  },
+  "checkChannel" : {
+    "Monday" : [
+      "Monday",
+      "Mon",
+      "Mo"
+    ],
+    "Tuesday" : [
+      "Tuesday",
+      "Tue",
+      "Tu"
+    ],
+    "Wednesday" : [
+      "Wednesday",
+      "Wed",
+      "We"
+    ],
+    "Thursday" : [
+      "Thursday",
+      "Thu",
+      "Th"
+    ],
+    "Friday" : [
+      "Friday",
+      "Fri",
+      "Fr"
+    ]
+  }
+}
