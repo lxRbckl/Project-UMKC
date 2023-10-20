@@ -1,2 +1,2 @@
-## [`Project UMKC 2`](http://lxrbckl.com/Project-UMKC-2)
-> Receive a Discord notification when your Zoom classes start. Fall 2021.
+### `Project UMKC 2`
+> Get notified on Discord when your Zoom classes commence. Fall 2021.
